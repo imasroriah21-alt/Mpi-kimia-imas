@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MPI Kimia - Konfigurasi Elektron Bohr</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0a2a6b;--blue:#1d63d8;--sun:#ffd23f}
+body{font-family:'Nunito',system-ui,sans-serif;background:linear-gradient(160deg,#0a2a6b,#1d63d8 60%,#4aa3ff) fixed;min-height:100vh;color:#0f2557}
+h1,h2,h3,.btn{font-family:'Baloo 2','Nunito',system-ui,sans-serif}
+.btn{display:inline-block;border-radius:14px;padding:.55rem 1.1rem;font-weight:700;background:var(--sun);color:var(--navy);box-shadow:0 4px 0 #c99a00;cursor:pointer;user-select:none;transition:transform .1s}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.07)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #c99a00}
+.btn.blue{background:var(--blue);color:#fff;box-shadow:0 4px 0 #0a2a6b}
+.btn.ghost{background:#eaf2ff;color:var(--navy);box-shadow:0 3px 0 #9dbcf0}
+.btn.sel{background:var(--blue);color:#fff;box-shadow:0 3px 0 #0a2a6b}
+.btn.good{background:#bbf7d0;box-shadow:0 3px 0 #4ade80}
+.btn.bad{background:#fecaca;box-shadow:0 3px 0 #f87171}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:none;transform:none}
+.card{background:#fff;border-radius:20px;padding:1.25rem;box-shadow:0 8px 24px rgba(5,25,80,.25);margin-bottom:1rem}
+.reveal{background:#eaf2ff;border-radius:12px;padding:.75rem;margin-top:.5rem}
+.blank{display:inline-block;min-width:72px;text-align:center;border-bottom:4px dashed var(--blue);background:#eaf2ff;border-radius:8px;padding:0 8px;margin:0 4px;cursor:pointer;font-weight:800}
+.blank.f{background:#ffe27a;border-bottom-style:solid}.blank.ok{background:#bbf7d0}.blank.no{background:#fecaca}
+.tok{display:inline-block;padding:2px 6px;margin:2px;border-radius:8px;cursor:pointer}
+.tok.s{background:var(--sun);font-weight:800}.tok.ok{background:#bbf7d0;font-weight:800}.tok.no{background:#fecaca}
+th,td{border:1px solid #bcd3f7;padding:.3rem .6rem;text-align:center}th{background:#eaf2ff}
+.orb{transform-origin:100px 100px;animation:spin 6s linear infinite}.o2{animation-duration:10s}.o3{animation-duration:15s;animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{from{opacity:0;transform:scale(.55) translateY(40px)}to{opacity:1;transform:none}}
+.pop{animation:pop .9s cubic-bezier(.2,1.3,.4,1) both}.pop2{animation:pop .9s .5s cubic-bezier(.2,1.3,.4,1) both}
+@media(prefers-reduced-motion:reduce){.orb,.pop,.pop2{animation:none}}
+@media print{#homeBtn,.noprint{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<button id="homeBtn" class="btn blue fixed top-3 left-3 z-50" data-act="menu" style="display:none">🏠 HOME</button>
+<main id="app" class="max-w-3xl mx-auto px-4 pt-16 pb-10"></main>
+
+<script>
+/* ====== PENGATURAN: tempel URL Web App (Apps Script) agar nilai masuk ke Sheet ====== */
+const SHEET_URL='';
+/* ====== DATA & UTIL ====== */
+const $=s=>document.querySelector(s),app=$('#app');
+const EL=[['H','Hidrogen'],['He','Helium'],['Li','Litium'],['Be','Berilium'],['B','Boron'],['C','Karbon'],['N','Nitrogen'],['O','Oksigen'],['F','Fluor'],['Ne','Neon'],['Na','Natrium'],['Mg','Magnesium'],['Al','Aluminium'],['Si','Silikon'],['P','Fosfor'],['S','Belerang'],['Cl','Klor'],['Ar','Argon'],['K','Kalium'],['Ca','Kalsium']];
+const S={name:'',vol:.6,music:true,un:{susun:1,tebak:1,pasang:1,kilat:1}};
+let G={},SIM={},M={p:0};
+const roman=['','I','II','III','IV','V','VI','VII','VIII'];
+const cfg=z=>{let r=z,a=[];for(const c of[2,8,8,8]){const t=Math.min(r,c);if(t>0)a.push(t);r-=t}return a};
+const cs=z=>cfg(z).join('.'),val=z=>cfg(z).at(-1),Pr=z=>cfg(z).length,Gl=z=>z==2?'VIIIA':roman[val(z)]+'A';
+const nm=z=>`${EL[z-1][1]} (${EL[z-1][0]})`,nmz=z=>`${EL[z-1][1]} (${EL[z-1][0]}, Z = ${z})`;
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),shuf=a=>[...a].sort(()=>Math.random()-.5);
+const RNG=[[1,6],[7,12],[13,18],[11,20]];
+const esc=t=>{const d=document.createElement('div');d.textContent=t;return d.innerHTML.replace(/"/g,'&quot;')};
+function atom(c,sz=200){let s=`<svg viewBox="0 0 200 200" width="${sz}" height="${sz}" class="mx-auto"><circle cx="100" cy="100" r="12" fill="#ffd23f"/>`;
+c.forEach((k,i)=>{const r=24+i*17;s+=`<circle cx="100" cy="100" r="${r}" fill="none" stroke="#9dbcf0" stroke-width="1.5"/>`;for(let j=0;j<k;j++){const a=2*Math.PI*j/k-Math.PI/2;s+=`<circle cx="${100+r*Math.cos(a)}" cy="${100+r*Math.sin(a)}" r="4.2" fill="#1d63d8"/>`}});return s+'</svg>'}
+function go(h,f){clearInterval(G.t);app.innerHTML=h;$('#homeBtn').style.display=f==1?'none':'block';if(f!=2)window.scrollTo(0,0)}
+const T=t=>`<h2 class="text-3xl font-extrabold text-white mb-4 text-center">${t}</h2>`;
+/* ====== AUDIO (disintesis, tanpa file eksternal) ====== */
+let AC,mg,bgG,sfG;
+function tone(f,t,d,ty,g,dest){const o=AC.createOscillator(),v=AC.createGain();o.type=ty;o.frequency.value=f;v.gain.setValueAtTime(g,t);v.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(v);v.connect(dest||sfG);o.start(t);o.stop(t+d+.05)}
+function applyVol(){if(!AC)return;mg.gain.value=S.vol;bgG.gain.value=S.music?.35:0}
+function initAudio(){if(AC){AC.resume();return}AC=new(window.AudioContext||window.webkitAudioContext)();mg=AC.createGain();mg.connect(AC.destination);bgG=AC.createGain();bgG.connect(mg);sfG=AC.createGain();sfG.connect(mg);applyVol();
+const mel=[523,659,784,659,880,784,659,523,587,698,880,698,784,659,587,392],bass=[131,131,175,196];let s=0;
+setInterval(()=>{if(!S.music)return;const t=AC.currentTime;tone(mel[s%16],t,.2,'triangle',.18,bgG);if(s%4==0)tone(bass[(s/4|0)%4],t,.5,'sine',.25,bgG);s++},260)}
+function sfx(n){if(!AC)return;const t=AC.currentTime;({click:()=>tone(700,t,.08,'square',.12),ok:()=>[523,659,784].forEach((f,i)=>tone(f,t+i*.09,.2,'triangle',.3)),bad:()=>{tone(220,t,.25,'sawtooth',.2);tone(165,t+.12,.3,'sawtooth',.2)},win:()=>[523,659,784,1047,1319].forEach((f,i)=>tone(f,t+i*.1,.3,'triangle',.3))})[n]?.()}
+/* ====== SPLASH & MENU ====== */
+function splash(){go(`<div class="min-h-[85vh] flex flex-col items-center justify-center text-center text-white -mt-10">
+<svg viewBox="0 0 200 200" class="w-44 h-44"><circle cx="100" cy="100" r="14" fill="#ffd23f"/><g class="orb"><circle cx="100" cy="100" r="34" fill="none" stroke="#bfe0ff" stroke-width="1.5"/><circle cx="134" cy="100" r="6" fill="#fff"/></g><g class="orb o2"><circle cx="100" cy="100" r="58" fill="none" stroke="#bfe0ff" stroke-width="1.5"/><circle cx="42" cy="100" r="6" fill="#fff"/></g><g class="orb o3"><circle cx="100" cy="100" r="82" fill="none" stroke="#bfe0ff" stroke-width="1.5"/><circle cx="100" cy="18" r="6" fill="#fff"/></g></svg>
+<h1 class="pop text-6xl md:text-7xl font-extrabold leading-none mt-4">KONFIGURASI<br>ELEKTRON</h1>
+<p class="pop2 text-xl mt-3 opacity-95">Model Atom Bohr · Kimia Kelas X SMA</p>
+<button class="btn pop2 text-3xl mt-8 px-12 py-3" data-act="mulai">MULAI</button>
+<p class="mt-10 text-blue-100 text-sm">Dikembangkan oleh Imas Roriah, S.Pd. Tahun 2026</p></div>`,1)}
+const mtxt=()=>S.music?'🎵 Musik: ON':'🔇 Musik: OFF';
+function menu(){go(`<p class="text-center text-blue-100 -mb-2">Pilih petualanganmu di dunia atom</p>${T('Menu Utama')}
+<div class="grid grid-cols-2 gap-4">${[['beranda','🏠','BERANDA'],['materi','📘','MATERI'],['simulasi','🧪','SIMULASI'],['kuis','🎮','KUIS']].map(([a,i,t])=>`<button class="btn py-7 text-2xl" data-act="${a}"><div class="text-5xl">${i}</div>${t}</button>`).join('')}</div>
+<div class="card mt-6"><h3 class="font-bold text-xl mb-2">⚙️ Pengaturan</h3><div class="flex items-center gap-3 flex-wrap"><button id="mt" class="btn blue" data-act="mus">${mtxt()}</button><label class="flex items-center gap-2 flex-1 min-w-[180px]">🔊 Volume<input id="vol" type="range" min="0" max="1" step=".05" value="${S.vol}" class="w-full"></label></div></div>
+<p class="text-center text-blue-100 text-sm mt-6">Dikembangkan oleh Imas Roriah, S.Pd. Tahun 2026</p>`)}
+function beranda(){go(`${T('Beranda')}<div class="card"><h3 class="font-bold text-xl mb-2">🎯 Tujuan Pembelajaran</h3><ol class="list-decimal ml-6 space-y-1"><li>Siswa dapat menuliskan susunan konfigurasi elektron Bohr.</li><li>Siswa dapat menganalisis letak golongan dan periode suatu unsur dengan menggunakan konfigurasi elektron Bohr.</li></ol></div>
+<div class="card"><h3 class="font-bold text-xl mb-2">🧭 Petunjuk Belajar</h3><ol class="list-decimal ml-6 space-y-1"><li><b>MATERI</b>: baca 5 halaman dan klik tombol untuk membuka jawaban.</li><li><b>KUIS</b>: mainkan 4 game, tiap game punya 4 level yang terbuka bertahap.</li><li><b>SIMULASI</b>: kerjakan 10 soal, masukkan namamu, lalu dapatkan sertifikat.</li><li>Atur musik dan volume di Menu Utama.</li></ol></div>
+<div class="card text-center"><p class="font-bold">Pengembang: Imas Roriah, S.Pd. Tahun 2026</p></div>`)}
+/* ====== MATERI ====== */
+const rv=(l,h)=>`<button class="btn ghost mt-3" data-act="rev">${l}</button><div class="reveal hidden">${h}</div>`;
+const PG=[
+['Model Atom Bohr',()=>`<p>Pada tahun 1913, Niels Bohr menyatakan bahwa <b>elektron mengelilingi inti atom pada lintasan tertentu</b> yang disebut <b>kulit</b>. Kulit diberi nama K, L, M, N, ... dari yang terdekat dengan inti.</p><div class="my-3">${atom([2,8,1],220)}<p class="text-center text-sm">Atom natrium: kulit K berisi 2, L berisi 8, M berisi 1 elektron.</p></div>${rv('Apa itu elektron valensi?','<b>Elektron valensi</b> adalah elektron pada <b>kulit terluar</b>. Elektron inilah yang menentukan sifat kimia unsur dan letak golongannya.')}`],
+['Kapasitas Kulit',()=>`<p>Jumlah elektron maksimum tiap kulit mengikuti rumus <b>2n²</b> (n = nomor kulit).</p><table class="w-full my-3"><tr><th>Kulit</th><th>n</th><th>2n²</th><th>Maksimum</th></tr><tr><td>K</td><td>1</td><td>2×1²</td><td>2</td></tr><tr><td>L</td><td>2</td><td>2×2²</td><td>8</td></tr><tr><td>M</td><td>3</td><td>2×3²</td><td>18</td></tr><tr><td>N</td><td>4</td><td>2×4²</td><td>32</td></tr></table><p>Aturan tambahan: elektron mengisi kulit dari yang terdalam, dan <b>kulit terluar maksimal 8 elektron</b> (kulit K sebagai kulit terluar maksimal 2).</p>${rv('Contoh: atom kalium (Z = 19)','K = 2, L = 8, M = 8 (bukan 9, karena M menjadi kulit kedua dari luar dan sisa 1 elektron pindah ke N). Hasil: <b>2.8.8.1</b>')}`],
+['Cara Menulis Konfigurasi',()=>`<ol class="list-decimal ml-6 space-y-1"><li>Jumlah elektron atom netral = nomor atom (Z).</li><li>Isi kulit K maksimal 2 elektron.</li><li>Sisanya isi kulit L maksimal 8 elektron.</li><li>Sisanya isi kulit M, lalu N, dengan kulit terluar maksimal 8.</li><li>Tulis dengan titik, misalnya <b>2.8.5</b>.</li></ol>${rv('Contoh: fosfor (Z = 15)','K = 2, L = 8, sisa 15 − 10 = 5 di kulit M. Konfigurasi <b>2.8.5</b>.')}
+<div class="mt-4 p-3 rounded-xl bg-blue-50"><b>Coba sendiri!</b> Geser untuk memilih nomor atom (1 sampai 20):<input id="zr" type="range" min="1" max="20" value="11" class="w-full"><div id="bres"></div></div>`],
+['Golongan dan Periode',()=>`<div class="grid gap-2 md:grid-cols-2"><div class="p-3 rounded-xl bg-blue-50"><b>Periode</b> = jumlah kulit yang terisi elektron.</div><div class="p-3 rounded-xl bg-blue-50"><b>Golongan A</b> = jumlah elektron valensi.</div></div>
+<table class="w-full my-3 text-sm"><tr><th>Elektron valensi</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr><tr><td>Golongan</td><td>IA</td><td>IIA</td><td>IIIA</td><td>IVA</td><td>VA</td><td>VIA</td><td>VIIA</td><td>VIIIA</td></tr></table><p class="text-sm">Catatan: helium (2 elektron valensi) termasuk golongan VIIIA (gas mulia).</p>
+${rv('Contoh 1: klor (Z = 17)','Konfigurasi 2.8.7 → valensi 7 → <b>golongan VIIA</b>; 3 kulit → <b>periode 3</b>.')}${rv('Contoh 2: kalsium (Z = 20)','Konfigurasi 2.8.8.2 → valensi 2 → <b>golongan IIA</b>; 4 kulit → <b>periode 4</b>.')}`],
+['Rangkuman',()=>`<ul class="list-disc ml-6 space-y-1"><li>Kulit atom: K, L, M, N dengan kapasitas 2, 8, 18, 32.</li><li>Kulit terluar maksimal 8 elektron.</li><li>Periode = jumlah kulit; golongan A = elektron valensi.</li></ul>${rv('Uji diri: letak unsur berkonfigurasi 2.8.4','Valensi 4 → golongan IVA; 3 kulit → periode 3 (silikon).')}<div class="flex gap-2 mt-4 flex-wrap"><button class="btn blue" data-act="kuis">🎮 Main Kuis</button><button class="btn" data-act="simulasi">🧪 Simulasi</button></div>`]];
+function bres(z){const c=cfg(z);$('#bres').innerHTML=`<div class="text-center"><p class="text-xl font-bold">${nm(z)}: <span class="text-blue-700">${c.join('.')}</span></p>${atom(c,170)}<p>Elektron valensi <b>${val(z)}</b> · Golongan <b>${Gl(z)}</b> · Periode <b>${Pr(z)}</b></p></div>`}
+function materi(){const p=M.p;go(`${T('Materi')}<div class="flex gap-2 flex-wrap justify-center mb-3">${PG.map((x,i)=>`<button class="btn ${i==p?'sel':'ghost'} text-sm" data-act="mp" data-p="${i}">${i+1}. ${x[0]}</button>`).join('')}</div>
+<div class="card"><h3 class="text-2xl font-extrabold text-blue-800 mb-2">${PG[p][0]}</h3>${PG[p][1]()}</div>
+<div class="flex justify-between"><button class="btn ghost" data-act="mp" data-p="${p-1}" ${p==0?'disabled':''}>◀ Sebelumnya</button><span class="text-white font-bold self-center">${p+1} / ${PG.length}</span><button class="btn blue" data-act="mp" data-p="${p+1}" ${p==PG.length-1?'disabled':''}>Selanjutnya ▶</button></div>`);if(p==2)bres(11)}
+/* ====== KUIS ====== */
+const GM={susun:['🧩','Susun Elektron','Isi kulit atom dengan elektron'],tebak:['🎯','Tebak Letak','Tentukan golongan dan periode'],pasang:['🃏','Kartu Pasangan','Cocokkan unsur dengan konfigurasinya'],kilat:['⚡','Benar atau Salah Kilat','Jawab cepat sebelum waktu habis']};
+const GF={susun:()=>g1(),tebak:()=>g2(),pasang:()=>g3(),kilat:()=>g4()};
+function kuis(){go(`${T('Kuis')}<div class="grid gap-3 md:grid-cols-2">${Object.entries(GM).map(([k,[i,t,d]])=>`<button class="btn text-left py-4" data-act="lv" data-g="${k}"><span class="text-4xl">${i}</span> <b class="text-xl">${t}</b><div class="text-sm font-normal">${d}</div></button>`).join('')}</div>`)}
+function lvMenu(g){go(`${T(GM[g][0]+' '+GM[g][1])}<div class="card text-center"><p class="mb-3">Pilih level. Selesaikan level untuk membuka level berikutnya.</p><div class="grid grid-cols-2 gap-3">${[1,2,3,4].map(l=>`<button class="btn ${l<=S.un[g]?'blue':'ghost'} py-5 text-xl" data-act="play" data-g="${g}" data-l="${l}" ${l>S.un[g]?'disabled':''}>${l>S.un[g]?'🔒':'⭐'} Level ${l}</button>`).join('')}</div><button class="btn ghost mt-4" data-act="kuis">◀ Kembali</button></div>`)}
+const hd=n=>`<p class="text-white text-center font-bold mb-2">Level ${G.l} · Soal ${G.i+1}/${n} · Skor ${G.sc}</p>`;
+function answered(ok,info){if(G.ok)return;G.ok=1;clearInterval(G.t);sfx(ok?'ok':'bad');if(ok)G.sc++;$('#fb').innerHTML=`<p class="font-bold ${ok?'text-green-700':'text-red-600'}">${ok?'✅ Benar!':'❌ Belum tepat.'} ${info||''}</p><button class="btn blue mt-2" data-act="nx">Lanjut ▶</button>`}
+function fin(n,pass){const p=pass??G.sc>=Math.ceil(n*.6);sfx(p?'win':'bad');if(p&&G.l<4)S.un[G.g]=Math.max(S.un[G.g],G.l+1);
+go(`<div class="card text-center"><div class="text-6xl">${p?'🏆':'💪'}</div><h2 class="text-3xl font-extrabold">${p?'Level selesai!':'Ayo coba lagi'}</h2><p class="text-xl my-2">Skor: <b>${G.sc}/${n}</b></p><div class="flex gap-2 justify-center flex-wrap"><button class="btn blue" data-act="play" data-g="${G.g}" data-l="${G.l}">Ulangi</button>${p&&G.l<4?`<button class="btn" data-act="play" data-g="${G.g}" data-l="${G.l+1}">Level ${G.l+1} ▶</button>`:''}<button class="btn ghost" data-act="lv" data-g="${G.g}">Pilih Level</button></div></div>`)}
+function g1(){const n=3;if(G.i>=n)return fin(n);const z=rnd(...RNG[G.l-1]);G.z=z;G.c=[0,0,0,0];G.ok=0;
+go(hd(n)+`<div class="card text-center"><p class="text-lg">Susun konfigurasi elektron <b>${nmz(z)}</b>.</p><div id="pv" class="my-2">${atom(G.c)}</div><div class="grid grid-cols-2 gap-2 text-left">${[...'KLMN'].map((k,i)=>`<div class="flex items-center justify-between bg-blue-50 rounded-xl p-2"><b>Kulit ${k}</b><span><button class="btn ghost px-3 py-0" data-act="cnt" data-k="${i}" data-d="-1">−</button> <b id="c${i}" class="inline-block w-8 text-center">0</b> <button class="btn ghost px-3 py-0" data-act="cnt" data-k="${i}" data-d="1">+</button></span></div>`).join('')}</div><p class="mt-2">Total elektron: <b id="tot">0</b></p><div id="fb" class="my-2"></div><button class="btn blue" data-act="chk1">Periksa</button></div>`)}
+function g2(){const n=5;if(G.i>=n)return fin(n);G.ok=0;const z=rnd(...RNG[G.l-1]),t=G.l==1?'p':G.l==2?'g':G.l==3?(G.i%2?'g':'p'):'e';let q,a,o;
+if(t=='p'){a=Pr(z)+'';o=['1','2','3','4'];q='Berada pada periode berapa?'}
+else if(t=='g'){a=Gl(z);o=shuf(['IA','IIA','IIIA','IVA','VA','VIA','VIIA','VIIIA'].filter(x=>x!=a)).slice(0,3).concat(a);q='Terletak pada golongan berapa?'}
+else{a=nm(z);const c=[];for(let i=11;i<=20;i++)if(i!=z)c.push(nm(i));o=shuf(c).slice(0,3).concat(a);q='Unsur apakah ini?'}
+G.a=a;
+go(hd(n)+`<div class="card text-center"><p class="text-lg">Sebuah atom berkonfigurasi elektron</p><p class="text-5xl font-extrabold text-blue-700 my-2">${cs(z)}</p>${atom(cfg(z),150)}<p class="text-lg font-bold mb-2">${q}</p><div class="grid grid-cols-2 gap-2">${shuf(o).map(x=>`<button class="btn ghost" data-act="ans2" data-v="${x}">${x}</button>`).join('')}</div><div id="fb" class="mt-3"></div></div>`)}
+function g3(){const n=[3,4,5,6][G.l-1];const zs=shuf([...Array(20)].map((_,i)=>i+1)).slice(0,n);G.cards=shuf(zs.flatMap(z=>[{z,t:'s'},{z,t:'c'}])).map((c,i)=>({...c,id:i,o:0,m:0}));G.sel=[];G.mv=0;G.lock=0;G.sc=0;draw3();window.scrollTo(0,0)}
+function draw3(){go(`<p class="text-white text-center font-bold mb-2">Level ${G.l} · Langkah: ${G.mv} · Cocokkan simbol unsur dengan konfigurasinya</p><div class="card"><div class="grid grid-cols-3 md:grid-cols-4 gap-2">${G.cards.map(c=>`<button class="btn ${c.m?'good':c.o?'sel':'ghost'} h-20 text-lg" data-act="flip" data-id="${c.id}">${c.o||c.m?(c.t=='s'?EL[c.z-1][0]+'<br><span class="text-xs">'+EL[c.z-1][1]+' (Z='+c.z+')</span>':cs(c.z)):'❓'}</button>`).join('')}</div></div>`,2)}
+function g4(){const n=5;if(G.i>=n)return fin(n);G.ok=0;const z=rnd(1,20),k=rnd(0,3),tr=Math.random()<.5,V=[cs,Gl,Pr,val],TP=['Konfigurasi elektron %n adalah %v.','%n terletak pada golongan %v.','%n terletak pada periode %v.','%n memiliki %v elektron valensi.'];
+const real=V[k](z);let shown=real;if(!tr){let w;do{w=rnd(1,20)}while(String(V[k](w))===String(real));shown=V[k](w)}
+G.tr=tr;G.real=TP[k].replace('%n',nmz(z)).replace('%v',real);G.sec=[12,10,8,6][G.l-1];G.tl=G.sec;
+go(hd(n)+`<div class="card text-center"><div class="h-3 bg-blue-100 rounded-full overflow-hidden mb-4"><div id="tb" class="h-3 bg-blue-600" style="width:100%"></div></div><p class="text-xl font-bold my-4">${TP[k].replace('%n',nmz(z)).replace('%v','<span class="text-blue-700">'+shown+'</span>')}</p><div class="grid grid-cols-2 gap-3"><button class="btn blue py-4 text-xl" data-act="ans4" data-v="1">✔ BENAR</button><button class="btn py-4 text-xl" data-act="ans4" data-v="0">✘ SALAH</button></div><div id="fb" class="mt-3"></div></div>`);
+G.t=setInterval(()=>{G.tl-=.1;const b=$('#tb');if(b)b.style.width=Math.max(0,G.tl/G.sec*100)+'%';if(G.tl<=0)answered(false,'Waktu habis! '+(tr?'Pernyataan itu benar.':'Pernyataan itu salah. Yang benar: '+G.real))},100)}
+/* ====== SIMULASI (10 soal) ====== */
+const QS=()=>[
+{t:'mc',q:'Konfigurasi elektron Bohr atom natrium (Z = 11) adalah ...',o:['2.8.1','2.9','2.1.8','2.8.2'],a:'2.8.1',ex:'11 elektron: K = 2, L = 8, sisa 1 di kulit M.'},
+{t:'dr',q:'Jumlah kulit atom menentukan __, sedangkan jumlah elektron valensi menentukan __.',a:['periode','golongan'],b:['periode','golongan','massa atom','jumlah neutron'],ex:'Periode = jumlah kulit; golongan A = elektron valensi.'},
+{t:'mk',ins:'Tandai bilangan yang menunjukkan jumlah elektron valensi.',q:'Atom Al (Z = 13) berkonfigurasi 2 – 8 – *3.',ex:'Elektron valensi = elektron kulit terluar = 3.'},
+{t:'mc',q:'Atom oksigen (Z = 8) memiliki elektron valensi sebanyak ...',o:['2','4','6','8'],a:'6',ex:'Konfigurasi 2.6, kulit terluar berisi 6 elektron.'},
+{t:'dr',q:'Atom klor (Z = 17) berkonfigurasi __ sehingga terletak pada golongan __ dan periode __.',a:['2.8.7','VIIA','3'],b:['2.8.7','2.8.8','VIIA','VA','3','2'],ex:'2.8.7: valensi 7 (VIIA), 3 kulit (periode 3).'},
+{t:'mk',ins:'Tandai golongan dan periode atom ini.',q:'Atom fosfor (Z = 15) berkonfigurasi 2.8.5 sehingga terletak pada golongan *VA dan periode *3.',ex:'2.8.5: valensi 5 (VA), 3 kulit (periode 3).'},
+{t:'mc',q:'Atom belerang (Z = 16) terletak pada golongan dan periode ...',o:['VIA, periode 3','VIA, periode 2','IVA, periode 3','VIIA, periode 3'],a:'VIA, periode 3',ex:'2.8.6: valensi 6, tiga kulit.'},
+{t:'dr',q:'Kulit K maksimal diisi __ elektron dan kulit L maksimal diisi __ elektron.',a:['2','8'],b:['2','8','18','32'],ex:'Rumus 2n²: K = 2, L = 8.'},
+{t:'mk',ins:'Tandai konfigurasi elektron, golongan, dan periode neon.',q:'Neon (Z = 10) berkonfigurasi *2.8 dan terletak pada golongan *VIIIA periode *2.',ex:'Ne: 2.8, valensi 8 (VIIIA), 2 kulit (periode 2).'},
+{t:'mc',q:'Unsur dengan konfigurasi elektron 2.8.8.2 terletak pada ...',o:['Golongan IIA, periode 4','Golongan IIA, periode 3','Golongan VIIIA, periode 4','Golongan IVA, periode 2'],a:'Golongan IIA, periode 4',ex:'Valensi 2 (IIA), 4 kulit (periode 4): kalsium.'}];
+function simStart(){go(`${T('Simulasi')}<div class="card"><h3 class="font-bold text-xl mb-1">10 Soal Uji Pemahaman</h3><p class="mb-3">Terdiri dari pilihan ganda, drag the word, dan mark the word. Tulis namamu untuk sertifikat dan data nilai.</p><label class="font-bold" for="nm">Nama siswa</label><input id="nm" type="text" maxlength="40" autocomplete="off" value="${esc(S.name)}" placeholder="Ketik namamu di sini" class="w-full border-2 border-blue-300 rounded-xl px-3 py-2 text-lg mt-1 outline-none focus:border-blue-600"><p id="err" class="text-red-600 text-sm h-5"></p><button class="btn blue mt-1" data-act="startSim">Mulai Simulasi ▶</button></div>`)}
+function drawSim(f){const q=SIM.Q[SIM.i];let b='';
+if(q.t=='mc')b=`<p class="text-lg font-bold mb-3">${q.q}</p>`+q.o.map(x=>`<button class="btn ${SIM.chk?(x==q.a?'good':x==SIM.cur?'bad':'ghost'):x==SIM.cur?'sel':'ghost'} block w-full text-left mb-2" data-act="mcp" data-v="${x}">${x}</button>`).join('');
+else if(q.t=='dr'){const p=q.q.split('__');b=`<p class="text-sm mb-2">Seret kata ke kotak kosong (atau klik kata, lalu klik kotak).</p><p class="text-lg leading-10">${p.map((s,i)=>s+(i<p.length-1?`<span class="blank ${SIM.chk?(SIM.f[i]==q.a[i]?'ok':'no'):SIM.f[i]?'f':''}" data-act="blk" data-i="${i}">${SIM.f[i]||'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span>`:'')).join('')}</p><div class="mt-3 flex flex-wrap gap-2 min-h-[44px]">${q.b.filter(w=>!SIM.f.includes(w)).map(w=>`<span class="btn ${SIM.sw==w?'sel':'ghost'}" draggable="true" data-act="chip" data-w="${w}">${w}</span>`).join('')}</div>`}
+else b=`<p class="text-sm mb-2">${q.ins} (klik kata untuk menandai)</p><p class="text-lg leading-9">${q.q.split(' ').map((w,i)=>{const c=w[0]=='*',s=SIM.mk.includes(i);return `<span class="tok ${SIM.chk?(c?'ok':s?'no':''):s?'s':''}" data-act="tok" data-i="${i}">${c?w.slice(1):w}</span>`}).join(' ')}</p>`;
+const ft=SIM.chk?`<p class="font-bold mt-4 ${SIM.ok?'text-green-700':'text-red-600'}">${SIM.ok?'✅ Benar! +10':'❌ Belum tepat.'}</p><p class="mb-2">${q.ex}</p><button class="btn blue" data-act="nxSim">${SIM.i==9?'Selesai ✔':'Lanjut ▶'}</button>`:`<button class="btn blue mt-4" data-act="chkSim">Periksa</button>`;
+go(`<p class="text-white text-center font-bold mb-2">Soal ${SIM.i+1}/10 · Skor ${SIM.sc}</p><div class="h-2 bg-blue-900/40 rounded-full mb-3"><div class="h-2 bg-yellow-300 rounded-full" style="width:${SIM.i*10}%"></div></div><div class="card">${b}${ft}</div>`,f)}
+async function kirim(rec){try{const a=JSON.parse(localStorage.getItem('mpi_nilai')||'[]');a.push(rec);localStorage.setItem('mpi_nilai',JSON.stringify(a))}catch(e){}
+if(!SHEET_URL)return'local';try{await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});return'ok'}catch(e){return'err'}}
+const pred=n=>n>=90?'Sangat Baik':n>=75?'Baik':n>=60?'Cukup':'Perlu Belajar Lagi';
+async function simEnd(){sfx('win');const sc=SIM.sc;
+go(`<div class="card text-center"><div class="text-6xl">🎉</div><h2 class="text-3xl font-extrabold">Simulasi selesai!</h2><p class="mt-2">${esc(S.name)}, nilaimu</p><p class="text-7xl font-extrabold text-blue-700">${sc}</p><p class="font-bold mb-2">${pred(sc)}</p><p id="st" class="text-sm mb-3">Menyimpan nilai...</p><div class="flex gap-2 justify-center flex-wrap"><button class="btn" data-act="cert">🏅 Lihat Sertifikat</button><button class="btn blue" data-act="simulasi">Ulangi</button><button class="btn ghost" data-act="csv">Unduh Rekap CSV</button></div></div>`);
+const r=await kirim({nama:S.name,nilai:sc,waktu:new Date().toISOString(),materi:'Konfigurasi Elektron'}),e=$('#st');
+if(e)e.textContent={ok:'Nilai terkirim ke Sheet ✔',local:'Nilai tersimpan di perangkat ini. (Guru: isi SHEET_URL pada kode agar nilai masuk ke Sheet.)',err:'Gagal mengirim ke Sheet, nilai tersimpan di perangkat.'}[r]}
+/* ====== AKSI (delegasi klik) ====== */
+const acts={
+mulai:()=>{initAudio();menu()},menu:()=>menu(),beranda,materi:()=>materi(),simulasi:()=>simStart(),kuis:()=>kuis(),
+mus:()=>{S.music=!S.music;applyVol();$('#mt').textContent=mtxt()},
+rev:b=>b.nextElementSibling.classList.toggle('hidden'),
+mp:b=>{M.p=+b.dataset.p;materi()},
+lv:b=>lvMenu(b.dataset.g),
+play:b=>{G={g:b.dataset.g,l:+b.dataset.l,i:0,sc:0};GF[G.g]()},
+nx:()=>{G.i++;GF[G.g]()},
+cnt:b=>{if(G.ok)return;const k=+b.dataset.k;G.c[k]=Math.max(0,Math.min(18,G.c[k]+ +b.dataset.d));$('#c'+k).textContent=G.c[k];$('#pv').innerHTML=atom(G.c);$('#tot').textContent=G.c.reduce((s,x)=>s+x,0)},
+chk1:()=>{if(G.ok)return;const t=cs(G.z),u=G.c.join('.').replace(/(\.0)+$/,'');answered(u==t,'Konfigurasi '+nm(G.z)+': '+t)},
+ans2:b=>{if(G.ok)return;const ok=b.dataset.v==G.a;b.classList.add(ok?'good':'bad');answered(ok,ok?'':'Jawaban: '+G.a)},
+ans4:b=>{if(G.ok)return;const ok=(b.dataset.v=='1')==G.tr;answered(ok,ok?'':'Yang benar: '+G.real)},
+flip:b=>{const c=G.cards[+b.dataset.id];if(G.lock||c.o||c.m)return;c.o=1;G.sel.push(c);draw3();if(G.sel.length<2)return;G.mv++;G.lock=1;const[x,y]=G.sel,ref=G.cards;
+setTimeout(()=>{if(G.cards!==ref)return;if(x.z==y.z){x.m=y.m=1;sfx('ok')}else sfx('bad');x.o=y.o=0;G.sel=[];G.lock=0;draw3();
+if(G.cards.every(k=>k.m)){const n=G.cards.length/2;G.sc=G.mv<=n+2?3:G.mv<=2*n?2:1;fin(3,true)}},700)},
+startSim:()=>{const v=($('#nm').value||'').trim();if(!v){$('#err').textContent='Isi namamu dulu ya.';$('#nm').focus();return}
+S.name=v;SIM={i:0,sc:0,Q:QS().map(q=>({...q,o:q.o&&shuf(q.o),b:q.b&&shuf(q.b)})),cur:null,f:[],sw:null,mk:[],chk:0};drawSim()},
+mcp:b=>{if(SIM.chk)return;SIM.cur=b.dataset.v;drawSim(2)},
+chip:b=>{if(SIM.chk)return;SIM.sw=SIM.sw==b.dataset.w?null:b.dataset.w;drawSim(2)},
+blk:b=>{if(SIM.chk)return;SIM.f[+b.dataset.i]=SIM.sw||'';SIM.sw=null;drawSim(2)},
+tok:b=>{if(SIM.chk)return;const i=+b.dataset.i,k=SIM.mk.indexOf(i);k<0?SIM.mk.push(i):SIM.mk.splice(k,1);drawSim(2)},
+chkSim:()=>{if(SIM.chk)return;const q=SIM.Q[SIM.i];let ok;
+if(q.t=='mc')ok=SIM.cur==q.a;else if(q.t=='dr')ok=q.a.every((x,i)=>SIM.f[i]==x);
+else{const c=q.q.split(' ').map((w,i)=>w[0]=='*'?i:-1).filter(i=>i>=0);ok=c.length==SIM.mk.length&&c.every(i=>SIM.mk.includes(i))}
+SIM.chk=1;SIM.ok=ok;if(ok)SIM.sc+=10;sfx(ok?'ok':'bad');drawSim(2)},
+nxSim:()=>{if(SIM.i==9)return simEnd();SIM.i++;SIM.cur=null;SIM.f=[];SIM.sw=null;SIM.mk=[];SIM.chk=0;drawSim()},
+cert:()=>go(`<div id="cert" class="card text-center" style="border:10px double #1d63d8;padding:2rem 1.25rem"><div class="text-6xl">🏅</div><h2 class="text-3xl font-extrabold text-blue-800">SERTIFIKAT PENCAPAIAN</h2><p class="mt-3">Diberikan kepada</p><p class="text-4xl font-extrabold text-blue-700 my-3 break-words">${esc(S.name)}</p><p>atas keberhasilan menyelesaikan simulasi<br><b>Konfigurasi Elektron Bohr</b> (Kimia Kelas X SMA)<br>dengan nilai <b>${SIM.sc}</b> dan predikat <b>${pred(SIM.sc)}</b>.</p><p class="mt-4 text-sm">${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</p><p class="font-bold mt-3">Pengembang media: Imas Roriah, S.Pd. Tahun 2026</p></div><div class="text-center noprint"><button class="btn" data-act="print">🖨️ Cetak / Simpan PDF</button> <button class="btn ghost" data-act="menu">Menu Utama</button></div>`),
+print:()=>window.print(),
+csv:()=>{let a=[];try{a=JSON.parse(localStorage.getItem('mpi_nilai')||'[]')}catch(e){}const t='nama,nilai,waktu\n'+a.map(r=>`"${r.nama.replace(/"/g,'""')}",${r.nilai},${r.waktu}`).join('\n'),l=document.createElement('a');l.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));l.download='rekap_nilai.csv';l.click()}
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;sfx('click');acts[b.dataset.act]?.(b)});
+document.addEventListener('input',e=>{const i=e.target.id;if(i=='vol'){S.vol=+e.target.value;applyVol()}else if(i=='zr')bres(+e.target.value);else if(i=='nm')S.name=e.target.value});
+document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='nm')acts.startSim()});
+document.addEventListener('dragstart',e=>{const c=e.target.closest?.('[data-w]');if(c)e.dataTransfer.setData('text/plain',c.dataset.w)});
+document.addEventListener('dragover',e=>{if(e.target.closest?.('.blank'))e.preventDefault()});
+document.addEventListener('drop',e=>{const b=e.target.closest?.('.blank');if(!b||SIM.chk)return;e.preventDefault();const w=e.dataTransfer.getData('text/plain');if(w){SIM.f[+b.dataset.i]=w;SIM.sw=null;drawSim(2)}});
+splash();
+</script>
+</body>
+</html>
